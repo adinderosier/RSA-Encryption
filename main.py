@@ -1,5 +1,4 @@
 import random
-import argparse
 
 
 def setup_arguements():
