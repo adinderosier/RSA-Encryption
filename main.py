@@ -124,6 +124,27 @@ def generate_keypair():
     return ((e, n), (d, n))
 
 
+def fast_pow(base, exp, mod):
+    """
+    The function calculates the result of raising a base to a given exponent
+    modulo a given number using a fast exponentiation algorithm.
+    
+    :param base: The base number that will be raised to the power of exp
+    :param exp: The exponent to which the base is raised
+    :param mod: The mod parameter is the modulus used in modular arithmetic.
+    It is used to compute the remainder of a division operation. In this
+    specific function, it is used to reduce the result of the exponentiation
+    operation to a value within the range of 0 to mod-1
+    :return: the result of raising the base to the power of exp, modulo mod.
+    """
+    if exp == 0:
+        return 1
+    elif exp % 2 == 0:
+        return fast_pow((base * base) % mod, exp // 2, mod) % mod
+    else:
+        return (base * fast_pow(base, exp - 1, mod)) % mod
+
+
 def encrypt(pk, plaintext):
     """
     The function takes a public key and plaintext as input, and returns the
@@ -139,7 +160,7 @@ def encrypt(pk, plaintext):
     taking the modulus of the result with the encryption modulus.
     """
     key, n = pk
-    cipher = [(ord(char) ** key) % n for char in plaintext]
+    cipher = [fast_pow(ord(char), key, n) for char in plaintext]
     return cipher
 
 
@@ -154,22 +175,83 @@ def decrypt(pk, ciphertext):
     :return: a string that represents the decrypted message.
     """
     key, n = pk
-    plain = [chr((char ** key) % n) for char in ciphertext]
+    plain = [chr(fast_pow(char, key, n)) for char in ciphertext]
     return ''.join(plain)
 
 
+def read_file(file_path):
+    """
+    This function reads the contents of a file and returns it as a string.
+    
+    :param file_path: The file path parameter is a string that specifies the
+    location and name of the file that needs to be read. It can be an
+    absolute or relative path to the file
+    :return: The function `read_file` is returning the contents of the file
+    located at the `file_path` parameter.
+    """
+    with open(file_path, 'r', encoding="utf-8") as file:
+        return file.read()
+
+
+def write_file(file_path, data):
+    """
+    The function writes data to a file at the specified file
+    path.
+    
+    :param file_path: The file path is a string that specifies the location
+    and name of the file that you want to write to. It can be an absolute or
+    relative path
+    :param data: The data parameter is the content that needs to be written
+    to the file. It can be a string or bytes object
+    """
+    with open(file_path, 'w', encoding="utf-8") as file:
+        file.write(data)
+        
+
 def main():
-    public, private = generate_keypair()
-    print("Public key:", public)
-    print("Private key:", private)
+    public, private = None, None
+    while True:
+        print("\nRSA Encryption/Decryption Menu:")
+        print("1. Generate public-private keypair")
+        print("2. Encrypt a plaintext file")
+        print("3. Decrypt a ciphertext file")
+        print("4. Exit program")
 
-    message = input("Enter a message to encrypt: ")
-    encrypted_msg = encrypt(public, message)
-    print("Encrypted message:", ''.join(map(lambda x: str(x), encrypted_msg)))
+        option = int(input("\nChoose an option: "))
 
-    decrypted_msg = decrypt(private, encrypted_msg)
-    print("Decrypted message:", decrypted_msg)
+        if option == 1:
+            public, private = generate_keypair()
+            print("\nPublic key:", public)
+            print("Private key:", private)
 
+        elif option == 2:
+            if public is None:
+                print("\nPublic key not generated. Please generate a public-private keypair first.")
+                continue
+            file_path = input("Enter the plaintext file path: ")
+            plaintext = read_file(file_path)
+            encrypted_text = encrypt(public, plaintext)
+            encrypted_file_path = input("Enter the encrypted file path to save: ")
+            write_file(encrypted_file_path, ' '.join(map(str, encrypted_text)))
+            print("\nEncryption successful.")
+
+        elif option == 3:
+            if private is None:
+                print("\nPrivate key not generated. Please generate a public-private keypair first.")
+                continue
+            file_path = input("Enter the ciphertext file path: ")
+            ciphertext = list(map(int, read_file(file_path).split()))
+            decrypted_text = decrypt(private, ciphertext)
+            decrypted_file_path = input("Enter the decrypted file path to save: ")
+            write_file(decrypted_file_path, decrypted_text)
+            print("\nDecryption successful.")
+
+        elif option == 4:
+            print("\nExiting program.")
+            break
+
+        else:
+            print("\nInvalid option. Please try again.")
 
 if __name__ == '__main__':
     main()
